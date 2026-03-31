@@ -88,6 +88,44 @@ async function upsertUser({ email, name, password, role, tags, description }) {
   });
 }
 
+/**
+ * Seed availability slots for the next N days.
+ * hours is an array of UTC hour numbers (0-23) to mark as available.
+ */
+async function seedAvailability(userId, mentorId, role, daysAhead, hours) {
+  const today = new Date();
+  // Start from UTC midnight today
+  const base = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+  for (let d = 1; d <= daysAhead; d++) {
+    const dayMs = base.getTime() + d * 24 * 60 * 60 * 1000;
+    const dateOnly = new Date(dayMs); // used as @db.Date
+
+    for (const hour of hours) {
+      const startTime = new Date(dayMs + hour * 60 * 60 * 1000);
+      const endTime   = new Date(dayMs + (hour + 1) * 60 * 60 * 1000);
+
+      const uniqueWhere = userId
+        ? { userId_date_startTime: { userId, date: dateOnly, startTime } }
+        : { mentorId_date_startTime: { mentorId, date: dateOnly, startTime } };
+
+      await prisma.availability.upsert({
+        where: uniqueWhere,
+        update: {},
+        create: {
+          id: uuidv4(),
+          userId: userId ?? null,
+          mentorId: mentorId ?? null,
+          role,
+          date: dateOnly,
+          startTime,
+          endTime,
+        },
+      });
+    }
+  }
+}
+
 async function main() {
   await upsertUser({
     ...admin,
@@ -118,9 +156,38 @@ async function main() {
     });
   }
 
-  console.log("Seed complete.");
+  // ── Seed availability (UTC hours) for the next 7 days ──────────────────────
+  // Users get morning slots: 9-11 AM UTC
+  // Mentors get overlapping slots: 10 AM - 12 PM UTC
+  // Overlap = 10-11 AM UTC (visible as common slot in admin dashboard)
+
+  const userEmails   = ["user1@example.com", "user2@example.com", "user3@example.com"];
+  const mentorEmails = ["mentor1@example.com", "mentor2@example.com", "mentor3@example.com"];
+
+  const USER_HOURS   = [9, 10, 11];       // 9 AM, 10 AM, 11 AM UTC
+  const MENTOR_HOURS = [10, 11, 12, 14];  // 10 AM, 11 AM, 12 PM, 2 PM UTC
+
+  for (const email of userEmails) {
+    const dbUser = await prisma.user.findUnique({ where: { email } });
+    if (dbUser) {
+      await seedAvailability(dbUser.id, null, "USER", 7, USER_HOURS);
+      console.log(`  Availability seeded for ${email}`);
+    }
+  }
+
+  for (const email of mentorEmails) {
+    const dbUser = await prisma.user.findUnique({ where: { email } });
+    if (dbUser) {
+      await seedAvailability(null, dbUser.id, "MENTOR", 7, MENTOR_HOURS);
+      console.log(`  Availability seeded for ${email}`);
+    }
+  }
+
+  console.log("\nSeed complete.");
   console.log("Admin:", admin.email, "/", ADMIN_PASSWORD);
   console.log("Mentors & users:", mentors.length + users.length, "accounts with password", PASSWORD);
+  console.log("Availability: user1-3 have 9-11 AM UTC · mentor1-3 have 10 AM-12 PM UTC");
+  console.log("→ Common overlap: 10 AM and 11 AM UTC slots");
 }
 
 main()

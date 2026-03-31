@@ -1,11 +1,15 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
+import AdminLayout from "./components/AdminLayout";
 import Login from "./pages/Login";
 import UserAvailability from "./pages/UserAvailability";
 import MentorAvailability from "./pages/MentorAvailability";
-import AdminDashboard from "./pages/AdminDashboard";
 import AdminSettings from "./pages/AdminSettings";
+import AdminSchedule from "./pages/AdminSchedule";
+import AdminBookings from "./pages/AdminBookings";
+import AdminUsers from "./pages/AdminUsers";
+import AdminMentors from "./pages/AdminMentors";
 
 const LOGIN_PATH = "/login";
 
@@ -44,7 +48,7 @@ function DefaultRedirect() {
   }
   if (!user) return <Navigate to={LOGIN_PATH} replace />;
   if (user.role === "MENTOR") return <Navigate to="/mentor" replace />;
-  if (user.role === "ADMIN") return <Navigate to="/admin" replace />;
+  if (user.role === "ADMIN") return <Navigate to="/admin/schedule" replace />;
   return <Navigate to="/availability" replace />;
 }
 
@@ -63,6 +67,8 @@ export default function App() {
     <NormalizePathname>
       <Routes>
         <Route path={LOGIN_PATH} element={<Login />} />
+
+        {/* User / Mentor routes — top-nav Layout */}
         <Route
           path="/"
           element={
@@ -88,23 +94,25 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="admin"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/settings"
-            element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
-                <AdminSettings />
-              </ProtectedRoute>
-            }
-          />
         </Route>
+
+        {/* Admin routes — sidebar AdminLayout */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/admin/schedule" replace />} />
+          <Route path="schedule" element={<AdminSchedule />} />
+          <Route path="bookings" element={<AdminBookings />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="mentors" element={<AdminMentors />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </NormalizePathname>

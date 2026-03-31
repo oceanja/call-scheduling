@@ -1,6 +1,6 @@
 export default function AdminSettings() {
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="p-6 space-y-6 max-w-xl">
       <h1 className="text-xl font-semibold text-white">Admin Settings</h1>
       <div className="bg-navy-900 border border-navy-700 rounded-xl p-6">
         <h2 className="text-lg font-medium text-white mb-2">Video calls</h2>
