@@ -16,6 +16,7 @@ const allowedOrigins = [
   frontendUrl,
   "http://localhost:3000",
   "http://localhost:5173",
+  "https://call-scheduling.vercel.app",
   "https://availabilitytrackerfrontend.vercel.app",
 ];
 
